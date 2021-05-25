@@ -8,6 +8,7 @@ import time
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse, parse_qs
 from dateutil.relativedelta import relativedelta
+from config import *
 
 def fet_news_list(datestr, page, prev_last_id):
     print(f"Fetching page {page}")
@@ -49,7 +50,7 @@ def fet_news_list(datestr, page, prev_last_id):
 
         body = {
             'oid': qs['oid'][0],
-            'aird': qs['aid'][0],
+            'aid': qs['aid'][0],
             'title': title
                     }
 
@@ -77,8 +78,8 @@ def fetch_news_list_for_date(queue, date):
 
         buffer = []
 
-        # for page in range(1,1000):
-        for page in range(1,20):
+        for page in range(1,1000):
+        # for page in range(1,5):
             entries = fet_news_list(datestr, page, prev_last_id)
 
             if len(entries) == 0:
@@ -119,12 +120,47 @@ def fetch_news_list_for_date(queue, date):
             return
 
 def fetch_last_news_article(): # 프로그렘 비정상 종료 시 끊겻던곳 부터 시작 할 수 있게 하기위해. 
-    return
+    url = f"{ELASTIC_SEARCH_URL}/news/_search"
+    query = """
+                {
+            "size": 1,
+            "sort": [
+                {
+                "created_at": {
+                    "order": "desc"
+                }
+                }
+            ]
+            }
+            """
+    headers = {'Content_Type': "application/json"}
+    r = requests.get(url, headers=headers, data=query, auth=ELASTIC_SEARCH_AUTH)
+    
+    print(r.status_code)
+    print(r.text)
+
+    results = json.loads(r.text)
+    hits = results['hits']['hits']
+
+    if len(hits) == 0:
+        return dt.datetime(2021,5,1), None
+    else:
+        last_date_str = hits[0]['_source']['created_at']
+        last_date = dt.datetime.fromisoformat(last_date_str)
+        last_news_id = hits[0]['_id'].replace('nn-','')
+
+    return last_date, last_news_id
 
 
 if __name__ == "__main__":
     sqs = boto3.resource('sqs')
+
     queue = sqs.get_queue_by_name(QueueName="naver-news-list")
+
+    base_date, last_news_id = fetch_last_news_article()
+
+    print(base_date)
+    print(last_news_id)
 
     # pdb.set_trace()
 
