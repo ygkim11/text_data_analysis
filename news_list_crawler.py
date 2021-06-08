@@ -11,13 +11,13 @@ from dateutil.relativedelta import relativedelta
 from config import *
 
 def fet_news_list(datestr, page, prev_last_id):
-    print(f"Fetching page {page}")
+    print(f"Fetching page {page} @ {datestr}")
 
 
     headers = { 'User-Agent': 'Mozilla/5.0 (Windows NT 6.0; WOW64; rv:24.0) Gecko/20100101 Firefox/24.0' }
 
-    url = f"https://news.naver.com/main/main.nhn?mode=LSD&mid=sec&sid1=101&date={datestr}&page={page}"
-
+    url = f"https://news.naver.com/main/list.nhn?mode=LSD&mid=sec&sid1=101&date={datestr}&page={page}"
+    
     r = requests.get(url, headers=headers)
 
     # print(r.status_code)
@@ -133,7 +133,9 @@ def fetch_last_news_article(): # 프로그렘 비정상 종료 시 끊겻던곳 
             ]
             }
             """
-    headers = {'Content_Type': "application/json"}
+
+    headers = { 'content-type': 'application/json' } # 어떤걸 던져줄지 알려줌
+
     r = requests.get(url, headers=headers, data=query, auth=ELASTIC_SEARCH_AUTH)
     
     print(r.status_code)
@@ -157,14 +159,10 @@ if __name__ == "__main__":
 
     queue = sqs.get_queue_by_name(QueueName="naver-news-list")
 
-    base_date, last_news_id = fetch_last_news_article()
+    base_date, last_news_id = fetch_last_news_article() # 시작하는 Base Date를 서버에 요청해서 정해주기
 
     print(base_date)
     print(last_news_id)
-
-    # pdb.set_trace()
-
-    base_date = dt.datetime(2021,5,1)
 
     for d in range(30):
         date = base_date + relativedelta(days=d)
